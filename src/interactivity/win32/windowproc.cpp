@@ -95,6 +95,15 @@ using namespace Microsoft::Console::Types;
         // Load all metrics we'll need.
         _UpdateSystemMetrics();
 
+
+        // should GetDpiForWindow
+        // scale pcs->cx/y ??
+        // determine monitor from pcs->x/y
+        // if current dpi != target monitor dpi, SWP onto that monitor first
+        // make sure position entirely on monitor
+        // SWP and show
+
+
         // The system is not great and the window rect is wrong the first time for High DPI (WM_DPICHANGED scales strangely.)
         // So here we have to grab the DPI of the current window (now that we have a window).
         // Then we have to re-propose a window size for our window that is scaled to DPI and SetWindowPos.
@@ -175,6 +184,14 @@ using namespace Microsoft::Console::Types;
 
     case WM_GETDPISCALEDSIZE:
     {
+        // get old/ new font size
+        // given new size, un-adjustwindowrect, s_CalculateWindowRect (using old dpi)
+        // scale from old font size to new font size
+        // adjustwindowrect (new dpi)
+
+
+
+
         // This message will send us the DPI we're about to be changed to.
         // Our goal is to use it to try to figure out the Window Rect that we'll need at that DPI to maintain
         // the same client rendering that we have now.
