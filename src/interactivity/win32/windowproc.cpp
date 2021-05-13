@@ -184,52 +184,7 @@ using namespace Microsoft::Console::Types;
 
     case WM_GETDPISCALEDSIZE:
     {
-        // get old/ new font size
-        // given new size, un-adjustwindowrect, s_CalculateWindowRect (using old dpi)
-        // scale from old font size to new font size
-        // adjustwindowrect (new dpi)
-
-
-
-
-        // This message will send us the DPI we're about to be changed to.
-        // Our goal is to use it to try to figure out the Window Rect that we'll need at that DPI to maintain
-        // the same client rendering that we have now.
-
-        // First retrieve the new DPI and the current DPI.
-        DWORD const dpiProposed = (WORD)wParam;
-        DWORD const dpiCurrent = g.dpi;
-
-        // Now we need to get what the font size *would be* if we had this new DPI. We need to ask the renderer about that.
-        const FontInfo& fiCurrent = ScreenInfo.GetCurrentFont();
-        FontInfoDesired fiDesired(fiCurrent);
-        FontInfo fiProposed(L"", 0, 0, { 0, 0 }, 0);
-
-        const HRESULT hr = g.pRender->GetProposedFont(dpiProposed, fiDesired, fiProposed);
-        // fiProposal will be updated by the renderer for this new font.
-        // GetProposedFont can fail if there's no render engine yet.
-        // This can happen if we're headless.
-        // Just assume that the font is 1x1 in that case.
-        const COORD coordFontProposed = SUCCEEDED(hr) ? fiProposed.GetSize() : COORD({ 1, 1 });
-
-        // Then from that font size, we need to calculate the client area.
-        // Then from the client area we need to calculate the window area (using the proposed DPI scalar here as well.)
-
-        // Retrieve the additional parameters we need for the math call based on the current window & buffer properties.
-        const Viewport viewport = ScreenInfo.GetViewport();
-        COORD coordWindowInChars = viewport.Dimensions();
-
-        const COORD coordBufferSize = ScreenInfo.GetTextBuffer().GetSize().Dimensions();
-
-        // Now call the math calculation for our proposed size.
-        RECT rectProposed = { 0 };
-        s_CalculateWindowRect(coordWindowInChars, dpiProposed, coordFontProposed, coordBufferSize, hWnd, &rectProposed);
-
-        // Prepare where we're going to keep our final suggestion.
-        SIZE* const pSuggestionSize = (SIZE*)lParam;
-
-        pSuggestionSize->cx = RECT_WIDTH(&rectProposed);
-        pSuggestionSize->cy = RECT_HEIGHT(&rectProposed);
+        _HandleGetDpiScaledSize(wParam, lParam);
 
         // Format our final suggestion for consumption.
         UnlockConsole();
@@ -956,6 +911,48 @@ BOOL Window::PostUpdateScrollBars() const
 BOOL Window::PostUpdateExtendedEditKeys() const
 {
     return PostMessageW(GetWindowHandle(), CM_UPDATE_EDITKEYS, 0, 0);
+}
+
+void Window::_HandleGetDpiScaledSize(const WPARAM wParam, const LPARAM lParam)
+{
+    SIZE* pSuggestionSize = (SIZE*)lParam;
+    DWORD const dpiProposed = (WORD)wParam;
+
+    const FontInfo& fiCurrent = ScreenInfo.GetCurrentFont();
+    FontInfoDesired fiDesired(fiCurrent);
+    FontInfo fiProposed(L"", 0, 0, { 0, 0 }, 0);
+    const HRESULT hr = g.pRender->GetProposedFont(dpiProposed, fiDesired, fiProposed);
+
+
+
+    // First retrieve the new DPI and the current DPI.
+    DWORD const dpiCurrent = g.dpi;
+
+    // Now we need to get what the font size *would be* if we had this new DPI. We need to ask the renderer about that.
+    // fiProposal will be updated by the renderer for this new font.
+    // GetProposedFont can fail if there's no render engine yet.
+    // This can happen if we're headless.
+    // Just assume that the font is 1x1 in that case.
+    const COORD coordFontProposed = SUCCEEDED(hr) ? fiProposed.GetSize() : COORD({ 1, 1 });
+
+    // Then from that font size, we need to calculate the client area.
+    // Then from the client area we need to calculate the window area (using the proposed DPI scalar here as well.)
+
+    // Retrieve the additional parameters we need for the math call based on the current window & buffer properties.
+    const Viewport viewport = ScreenInfo.GetViewport();
+    COORD coordWindowInChars = viewport.Dimensions();
+
+    const COORD coordBufferSize = ScreenInfo.GetTextBuffer().GetSize().Dimensions();
+
+    // Now call the math calculation for our proposed size.
+    RECT rectProposed = { 0 };
+    s_CalculateWindowRect(coordWindowInChars, dpiProposed, coordFontProposed, coordBufferSize, hWnd, &rectProposed);
+
+    // Prepare where we're going to keep our final suggestion.
+    SIZE* const pSuggestionSize = (SIZE*)lParam;
+
+    pSuggestionSize->cx = RECT_WIDTH(&rectProposed);
+    pSuggestionSize->cy = RECT_HEIGHT(&rectProposed);
 }
 
 #pragma endregion
